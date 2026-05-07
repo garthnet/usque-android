@@ -1,7 +1,7 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -37,6 +37,11 @@ jobs:
           make android
           mkdir -p usque-vpn/app/libs
           cp usque.aar usque-vpn/app/libs/
+
+      - name: Generate Gradle Wrapper
+        run: |
+          cd android/usque-vpn
+          gradle wrapper --gradle-version 8.5
 
       - name: Build Debug APK
         run: |
