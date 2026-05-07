@@ -115,6 +115,11 @@ class MainActivity : Activity() {
                 Toast.makeText(this, if (which == 0) "全局代理模式" else "分应用代理模式", Toast.LENGTH_SHORT).show()
                 updateUI()
                 dialog.dismiss()
+                // Restart VPN if running to apply new mode
+                if (UsqueVpnService.isRunning) {
+                    UsqueVpnService.restart(this)
+                    connectButton.postDelayed({ updateUI() }, 2000)
+                }
             }
             .setNegativeButton("取消", null)
             .show()
@@ -246,6 +251,11 @@ class MainActivity : Activity() {
                 prefs.edit().putStringSet(KEY_ALLOWED_APPS, selected).apply()
                 Toast.makeText(this, "已选择 ${selected.size} 个应用", Toast.LENGTH_SHORT).show()
                 updateUI()
+                // Restart VPN if running to apply new app list
+                if (UsqueVpnService.isRunning) {
+                    UsqueVpnService.restart(this)
+                    connectButton.postDelayed({ updateUI() }, 2000)
+                }
             }
             .setNegativeButton("取消", null)
             .show()

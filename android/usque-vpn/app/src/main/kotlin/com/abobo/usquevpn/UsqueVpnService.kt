@@ -10,13 +10,6 @@ import usqueandroid.Usqueandroid
 import usqueandroid.VpnStateCallback
 import java.io.FileOutputStream
 
-/**
- * UsqueVpnService provides a system-level VPN using Cloudflare WARP/MASQUE protocol.
- *
- * Supports two modes:
- * - Global: All traffic goes through VPN
- * - Per-App: Only selected apps go through VPN
- */
 class UsqueVpnService : VpnService() {
 
     companion object {
@@ -36,6 +29,17 @@ class UsqueVpnService : VpnService() {
         fun stop() {
             Log.i(TAG, "Static stop() called")
             instance?.disconnect()
+        }
+
+        /** Restart VPN to apply new settings */
+        fun restart(context: Context) {
+            Log.i(TAG, "Restarting VPN to apply new settings...")
+            stop()
+            // Wait a bit then restart
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val intent = Intent(context, UsqueVpnService::class.java)
+                context.startService(intent)
+            }, 500)
         }
     }
 
@@ -63,7 +67,6 @@ class UsqueVpnService : VpnService() {
 
         val configPath = "${filesDir.absolutePath}/config.json"
 
-        // Check registration
         if (!Usqueandroid.isRegistered(configPath)) {
             Log.i(TAG, "Not registered, registering now...")
             val error = Usqueandroid.register(configPath, android.os.Build.MODEL)
@@ -87,6 +90,9 @@ class UsqueVpnService : VpnService() {
         }
 
         try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val mode = prefs.getString(KEY_PROXY_MODE, MODE_GLOBAL) ?: MODE_GLOBAL
+
             val builder = Builder()
                 .setSession("Usque WARP VPN")
                 .setMtu(1280)
@@ -109,64 +115,28 @@ class UsqueVpnService : VpnService() {
             builder.addDnsServer("2606:4700:4700::1111")
             builder.addDnsServer("2606:4700:4700::1001")
 
-            // Always exclude self to prevent VPN loop
-            builder.addDisallowedApplication(packageName)
-
-            // Apply per-app or global mode
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val mode = prefs.getString(KEY_PROXY_MODE, MODE_GLOBAL) ?: MODE_GLOBAL
-
             if (mode == MODE_PER_APP) {
+                // Per-app mode: only selected apps go through VPN
+                // IMPORTANT: use ONLY addAllowedApplication, do NOT mix with addDisallowedApplication
                 val allowedApps = prefs.getStringSet(KEY_ALLOWED_APPS, emptySet()) ?: emptySet()
                 Log.i(TAG, "Per-app mode: ${allowedApps.size} apps selected")
 
-                // When using allowlist, we need to add allowed apps
-                // Note: addDisallowedApplication(self) is already called above
-                // For per-app mode, we use addAllowedApplication for each selected app
-                // But Android VPN Builder doesn't support mixing allow/disallow
-                // So we need to restructure: remove the self-exclusion and use allowlist approach
-
-                // Re-create builder without the self-exclusion
-                val perAppBuilder = Builder()
-                    .setSession("Usque WARP VPN")
-                    .setMtu(1280)
-
-                perAppBuilder.addAddress(vpnIpv4, 32)
-                perAppBuilder.addRoute("0.0.0.0", 0)
-
-                if (vpnIpv6.isNotEmpty()) {
-                    try {
-                        perAppBuilder.addAddress(vpnIpv6, 128)
-                        perAppBuilder.addRoute("::", 0)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to add IPv6: ${e.message}")
-                    }
-                }
-
-                perAppBuilder.addDnsServer("1.1.1.1")
-                perAppBuilder.addDnsServer("1.0.0.1")
-                perAppBuilder.addDnsServer("2606:4700:4700::1111")
-                perAppBuilder.addDnsServer("2606:4700:4700::1001")
-
-                // Add each allowed app
                 for (appPackage in allowedApps) {
                     try {
-                        perAppBuilder.addAllowedApplication(appPackage)
-                        Log.d(TAG, "Allowed app: $appPackage")
+                        builder.addAllowedApplication(appPackage)
+                        Log.d(TAG, "  Allowed: $appPackage")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to add allowed app $appPackage: ${e.message}")
+                        Log.w(TAG, "  Failed to allow $appPackage: ${e.message}")
                     }
                 }
-
-                // Exclude self
-                perAppBuilder.addDisallowedApplication(packageName)
-
-                vpnInterface = perAppBuilder.establish()
+                // Self is NOT in allowlist → self traffic bypasses VPN → no loop
             } else {
-                // Global mode: all traffic through VPN
+                // Global mode: all traffic through VPN, exclude self to prevent loop
                 Log.i(TAG, "Global mode: all traffic through VPN")
-                vpnInterface = builder.establish()
+                builder.addDisallowedApplication(packageName)
             }
+
+            vpnInterface = builder.establish()
 
             if (vpnInterface == null) {
                 Log.e(TAG, "Failed to establish VPN interface")
@@ -177,7 +147,7 @@ class UsqueVpnService : VpnService() {
             val fd = vpnInterface!!.fd
             outputStream = FileOutputStream(vpnInterface!!.fileDescriptor)
 
-            Log.i(TAG, "VPN interface established with fd=$fd")
+            Log.i(TAG, "VPN interface established with fd=$fd, mode=$mode")
 
             isRunning = true
 
@@ -195,14 +165,12 @@ class UsqueVpnService : VpnService() {
 
             val callback = object : VpnStateCallback {
                 override fun onConnected() {
-                    Log.i(TAG, "MASQUE tunnel connected to Cloudflare!")
+                    Log.i(TAG, "MASQUE tunnel connected!")
                 }
-
                 override fun onDisconnected(reason: String?) {
                     Log.w(TAG, "MASQUE tunnel disconnected: $reason")
                     disconnect()
                 }
-
                 override fun onError(message: String?) {
                     Log.e(TAG, "MASQUE tunnel error: $message")
                 }
@@ -217,7 +185,7 @@ class UsqueVpnService : VpnService() {
                 return START_NOT_STICKY
             }
 
-            Log.i(TAG, "VPN Service started successfully! Mode: $mode")
+            Log.i(TAG, "VPN started! Mode: $mode, Allowed apps: ${if (mode == MODE_PER_APP) (prefs.getStringSet(KEY_ALLOWED_APPS, emptySet())?.size ?: 0) else "all"}")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create VPN interface", e)
@@ -230,51 +198,27 @@ class UsqueVpnService : VpnService() {
 
     fun disconnect() {
         Log.i(TAG, "disconnect() called")
-
-        if (!isRunning) {
-            Log.w(TAG, "VPN not running, nothing to disconnect")
-            return
-        }
-
+        if (!isRunning) return
         isRunning = false
 
-        try {
-            Log.i(TAG, "Stopping Go tunnel...")
-            Usqueandroid.stopTunnel()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping Go tunnel", e)
-        }
-
-        try {
-            Log.i(TAG, "Closing output stream...")
-            outputStream?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error closing output stream", e)
-        }
+        try { Usqueandroid.stopTunnel() } catch (e: Exception) { Log.e(TAG, "Error stopping tunnel", e) }
+        try { outputStream?.close() } catch (e: Exception) { Log.e(TAG, "Error closing stream", e) }
         outputStream = null
-
-        try {
-            Log.i(TAG, "Closing VPN interface...")
-            vpnInterface?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error closing VPN interface", e)
-        }
+        try { vpnInterface?.close() } catch (e: Exception) { Log.e(TAG, "Error closing VPN", e) }
         vpnInterface = null
 
-        Log.i(TAG, "Stopping service...")
         stopSelf()
     }
 
     override fun onDestroy() {
-        Log.i(TAG, "onDestroy() called")
-        if (isRunning) { disconnect() }
+        Log.i(TAG, "onDestroy()")
+        if (isRunning) disconnect()
         instance = null
         super.onDestroy()
-        Log.i(TAG, "VPN Service destroyed")
     }
 
     override fun onRevoke() {
-        Log.i(TAG, "VPN revoked by user")
+        Log.i(TAG, "onRevoke()")
         disconnect()
     }
 }
