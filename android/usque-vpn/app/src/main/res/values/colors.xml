@@ -3,12 +3,12 @@
     <color name="ic_launcher_background">#6c5ce7</color>
     <color name="bg_primary">#1a1a2e</color>
     <color name="bg_card">#252542</color>
-    <color name="accent_primary">#6c5ce7</color>
+    <color name="accent_primary">#a29bfe</color>
     <color name="accent_secondary">#00cec9</color>
     <color name="text_primary">#f1f5f9</color>
     <color name="text_secondary">#94a3b8</color>
     <color name="text_dim">#64748b</color>
-    <color name="success">#22c55e</color>
-    <color name="error">#ef4444</color>
+    <color name="success">#fdcb6e</color>
+    <color name="error">#e17055</color>
     <color name="divider">#353555</color>
 </resources>
