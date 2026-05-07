@@ -5,18 +5,14 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Shield shape -->
+    <!-- Shield -->
     <path
         android:fillColor="#00d4aa"
-        android:pathData="M54,14L22,28v18c0,20 13.5,38.5 32,42 18.5,-3.5 32,-22 32,-42V28L54,14z" />
+        android:pathData="M54,6L12,24v26c0,28 18,50 42,54 24,-4 42,-26 42,-54V24L54,6z" />
 
-    <!-- Shield inner -->
-    <path
-        android:fillColor="#00b894"
-        android:pathData="M54,22L30,33v13c0,16 10.5,30.5 24,34 13.5,-3.5 24,-18 24,-34V33L54,22z" />
-
-    <!-- Letter U -->
+    <!-- Letter U - massive, fills entire shield area -->
+    <!-- Outer U shape -->
     <path
         android:fillColor="#ffffff"
-        android:pathData="M42,40v16c0,6.6 5.4,12 12,12s12,-5.4 12,-12V40h-8v16c0,2.2-1.8,4-4,4s-4,-1.8-4,-4V40z" />
+        android:pathData="M30,28 L30,62 C30,78 40,88 54,88 C68,88 78,78 78,62 L78,28 L66,28 L66,62 C66,72 61,76 54,76 C47,76 42,72 42,62 L42,28 Z" />
 </vector>
