@@ -101,9 +101,16 @@ class MainActivity : Activity() {
     private fun loadSavedSettings() {
         val savedSni = prefs.getString(KEY_SNI, "www.visa.cn") ?: "www.visa.cn"
         Usqueandroid.setSNI(savedSni)
+
+        // Migrate old default endpoint
         val savedEndpoint = prefs.getString(KEY_ENDPOINT, "") ?: ""
-        if (savedEndpoint.isNotEmpty()) {
-            Usqueandroid.setEndpoint(savedEndpoint)
+        if (savedEndpoint == "162.159.198.1:443" || savedEndpoint == "162.159.198.1") {
+            prefs.edit().remove(KEY_ENDPOINT).apply()
+        }
+
+        val endpoint = prefs.getString(KEY_ENDPOINT, "") ?: ""
+        if (endpoint.isNotEmpty()) {
+            Usqueandroid.setEndpoint(endpoint)
         }
     }
 

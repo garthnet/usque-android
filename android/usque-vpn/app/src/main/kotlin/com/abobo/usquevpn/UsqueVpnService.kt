@@ -1,8 +1,16 @@
 package com.abobo.usquevpn
 
-import android.content.Intent
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.net.TrafficStats
 import android.net.VpnService
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import usqueandroid.PacketFlow
@@ -14,6 +22,8 @@ class UsqueVpnService : VpnService() {
 
     companion object {
         private const val TAG = "UsqueVpnService"
+        private const val CHANNEL_ID = "usque_vpn_channel"
+        private const val NOTIFICATION_ID = 1
         const val ACTION_DISCONNECT = "com.abobo.usquevpn.DISCONNECT"
         const val PREFS_NAME = "UsqueVpnPrefs"
         const val KEY_PROXY_MODE = "proxy_mode"
@@ -31,12 +41,10 @@ class UsqueVpnService : VpnService() {
             instance?.disconnect()
         }
 
-        /** Restart VPN to apply new settings */
         fun restart(context: Context) {
-            Log.i(TAG, "Restarting VPN to apply new settings...")
+            Log.i(TAG, "Restarting VPN...")
             stop()
-            // Wait a bit then restart
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            Handler(Looper.getMainLooper()).postDelayed({
                 val intent = Intent(context, UsqueVpnService::class.java)
                 context.startService(intent)
             }, 500)
@@ -45,10 +53,23 @@ class UsqueVpnService : VpnService() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private var outputStream: FileOutputStream? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var lastRxBytes: Long = 0
+    private var lastTxBytes: Long = 0
+    private var lastTrafficTime: Long = 0
+
+    private val speedUpdater = object : Runnable {
+        override fun run() {
+            if (!isRunning) return
+            updateSpeedNotification()
+            handler.postDelayed(this, 1000)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -104,7 +125,6 @@ class UsqueVpnService : VpnService() {
                 try {
                     builder.addAddress(vpnIpv6, 128)
                     builder.addRoute("::", 0)
-                    Log.i(TAG, "IPv6 configured: $vpnIpv6")
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to add IPv6: ${e.message}")
                 }
@@ -116,30 +136,28 @@ class UsqueVpnService : VpnService() {
             builder.addDnsServer("2606:4700:4700::1001")
 
             if (mode == MODE_PER_APP) {
-                // Per-app mode: only selected apps go through VPN
-                // IMPORTANT: use ONLY addAllowedApplication, do NOT mix with addDisallowedApplication
                 val allowedApps = prefs.getStringSet(KEY_ALLOWED_APPS, emptySet()) ?: emptySet()
-                Log.i(TAG, "Per-app mode: ${allowedApps.size} apps selected")
-
+                Log.i(TAG, "Per-app mode: ${allowedApps.size} apps")
                 for (appPackage in allowedApps) {
                     try {
                         builder.addAllowedApplication(appPackage)
-                        Log.d(TAG, "  Allowed: $appPackage")
                     } catch (e: Exception) {
-                        Log.w(TAG, "  Failed to allow $appPackage: ${e.message}")
+                        Log.w(TAG, "Failed to allow $appPackage: ${e.message}")
                     }
                 }
-                // Self is NOT in allowlist → self traffic bypasses VPN → no loop
             } else {
-                // Global mode: all traffic through VPN, exclude self to prevent loop
-                Log.i(TAG, "Global mode: all traffic through VPN")
+                Log.i(TAG, "Global mode")
                 builder.addDisallowedApplication(packageName)
             }
+
+            // Show foreground notification BEFORE establish
+            startForeground(NOTIFICATION_ID, buildNotification("0 B/s ↓", "0 B/s ↑", "连接中..."))
 
             vpnInterface = builder.establish()
 
             if (vpnInterface == null) {
                 Log.e(TAG, "Failed to establish VPN interface")
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -150,6 +168,12 @@ class UsqueVpnService : VpnService() {
             Log.i(TAG, "VPN interface established with fd=$fd, mode=$mode")
 
             isRunning = true
+
+            // Start speed monitoring
+            lastRxBytes = TrafficStats.getTotalRxBytes()
+            lastTxBytes = TrafficStats.getTotalTxBytes()
+            lastTrafficTime = System.currentTimeMillis()
+            handler.post(speedUpdater)
 
             val packetFlow = object : PacketFlow {
                 override fun writePacket(data: ByteArray?) {
@@ -166,6 +190,7 @@ class UsqueVpnService : VpnService() {
             val callback = object : VpnStateCallback {
                 override fun onConnected() {
                     Log.i(TAG, "MASQUE tunnel connected!")
+                    updateSpeedNotification()
                 }
                 override fun onDisconnected(reason: String?) {
                     Log.w(TAG, "MASQUE tunnel disconnected: $reason")
@@ -180,15 +205,18 @@ class UsqueVpnService : VpnService() {
             if (tunnelError.isNotEmpty()) {
                 Log.e(TAG, "Failed to start tunnel: $tunnelError")
                 isRunning = false
+                handler.removeCallbacks(speedUpdater)
                 vpnInterface?.close()
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
             }
 
-            Log.i(TAG, "VPN started! Mode: $mode, Allowed apps: ${if (mode == MODE_PER_APP) (prefs.getStringSet(KEY_ALLOWED_APPS, emptySet())?.size ?: 0) else "all"}")
+            Log.i(TAG, "VPN started! Mode: $mode")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create VPN interface", e)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -196,10 +224,94 @@ class UsqueVpnService : VpnService() {
         return START_STICKY
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Usque VPN",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "VPN status and speed"
+                setShowBadge(false)
+            }
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(downloadSpeed: String, uploadSpeed: String, status: String): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val disconnectIntent = PendingIntent.getService(
+            this, 1,
+            Intent(this, UsqueVpnService::class.java).apply { action = ACTION_DISCONNECT },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+
+        return builder
+            .setContentTitle("↓ $downloadSpeed  ↑ $uploadSpeed")
+            .setContentText(status)
+            .setSmallIcon(android.R.drawable.ic_menu_share)
+            .setContentIntent(pendingIntent)
+            .addAction(Notification.Action.Builder(
+                null, "断开", disconnectIntent
+            ).build())
+            .setOngoing(true)
+            .build()
+    }
+
+    private fun updateSpeedNotification() {
+        val now = System.currentTimeMillis()
+        val currentRx = TrafficStats.getTotalRxBytes()
+        val currentTx = TrafficStats.getTotalTxBytes()
+        val elapsed = now - lastTrafficTime
+
+        if (elapsed > 0) {
+            val rxSpeed = (currentRx - lastRxBytes) * 1000 / elapsed
+            val txSpeed = (currentTx - lastTxBytes) * 1000 / elapsed
+
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val mode = prefs.getString(KEY_PROXY_MODE, MODE_GLOBAL) ?: MODE_GLOBAL
+            val modeStr = if (mode == MODE_GLOBAL) "全局代理" else "分应用代理"
+
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.notify(NOTIFICATION_ID, buildNotification(
+                formatSpeed(rxSpeed),
+                formatSpeed(txSpeed),
+                "已连接 · $modeStr"
+            ))
+
+            lastRxBytes = currentRx
+            lastTxBytes = currentTx
+            lastTrafficTime = now
+        }
+    }
+
+    private fun formatSpeed(bytesPerSec: Long): String {
+        return when {
+            bytesPerSec < 1024 -> "$bytesPerSec B/s"
+            bytesPerSec < 1024 * 1024 -> String.format("%.1f KB/s", bytesPerSec / 1024.0)
+            else -> String.format("%.2f MB/s", bytesPerSec / (1024.0 * 1024.0))
+        }
+    }
+
     fun disconnect() {
         Log.i(TAG, "disconnect() called")
         if (!isRunning) return
         isRunning = false
+
+        handler.removeCallbacks(speedUpdater)
 
         try { Usqueandroid.stopTunnel() } catch (e: Exception) { Log.e(TAG, "Error stopping tunnel", e) }
         try { outputStream?.close() } catch (e: Exception) { Log.e(TAG, "Error closing stream", e) }
@@ -207,6 +319,7 @@ class UsqueVpnService : VpnService() {
         try { vpnInterface?.close() } catch (e: Exception) { Log.e(TAG, "Error closing VPN", e) }
         vpnInterface = null
 
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
