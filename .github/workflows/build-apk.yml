@@ -40,6 +40,20 @@ jobs:
           mkdir -p usque-vpn/app/libs
           cp usque.aar usque-vpn/app/libs/
 
+      - name: Generate debug keystore
+        run: |
+          cd android/usque-vpn/app
+          mkdir -p keystore
+          keytool -genkey -v \
+            -keystore keystore/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Usque Debug, OU=Dev, O=Usque, L=Unknown, ST=Unknown, C=US"
+
       - name: Generate Gradle Wrapper
         run: |
           cd android/usque-vpn

@@ -106,8 +106,9 @@ class MainActivity : Activity() {
 
         // Migrate old default endpoint
         val savedEndpoint = prefs.getString(KEY_ENDPOINT, "") ?: ""
-        if (savedEndpoint == "162.159.198.1:443" || savedEndpoint == "162.159.198.1") {
-            prefs.edit().remove(KEY_ENDPOINT).apply()
+        if (savedEndpoint.contains("162.159.198.1") || savedEndpoint == "162.159.198.1:443") {
+            prefs.edit().putString(KEY_ENDPOINT, "162.159.198.2:500").apply()
+            Usqueandroid.setEndpoint("162.159.198.2:500")
         }
 
         val endpoint = prefs.getString(KEY_ENDPOINT, "") ?: ""
@@ -125,7 +126,7 @@ class MainActivity : Activity() {
         val currentLang = prefs.getString(KEY_LANGUAGE, LANG_ZH) ?: LANG_ZH
         val checkedIndex = langCodes.indexOf(currentLang).coerceAtLeast(0)
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_UsqueVpn_Dialog)
             .setTitle(R.string.language_title)
             .setSingleChoiceItems(languages, checkedIndex) { dialog, which ->
                 val newLang = langCodes[which]
@@ -149,7 +150,7 @@ class MainActivity : Activity() {
         )
         val checkedIndex = if (currentMode == MODE_GLOBAL) 0 else 1
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_UsqueVpn_Dialog)
             .setTitle(R.string.mode_title)
             .setSingleChoiceItems(modes, checkedIndex) { dialog, which ->
                 val newMode = if (which == 0) MODE_GLOBAL else MODE_PER_APP
@@ -339,7 +340,7 @@ class MainActivity : Activity() {
             updateSelectedCount()
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_UsqueVpn_Dialog)
             .setTitle(R.string.app_picker_title)
             .setView(dialogView)
             .setPositiveButton(R.string.settings_save) { _, _ ->
@@ -370,7 +371,7 @@ class MainActivity : Activity() {
             endpointInput.setText(Usqueandroid.getDefaultEndpoint(configPath))
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_UsqueVpn_Dialog)
             .setTitle(R.string.settings_title)
             .setView(dialogView)
             .setPositiveButton(R.string.settings_save) { _, _ ->

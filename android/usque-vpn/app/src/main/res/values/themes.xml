@@ -7,4 +7,14 @@
         <item name="android:navigationBarColor">#FF000000</item>
         <item name="android:windowBackground">#FF000000</item>
     </style>
+
+    <style name="Theme.UsqueVpn.Dialog" parent="android:Theme.Material.Dialog">
+        <item name="android:colorPrimary">#00d4aa</item>
+        <item name="android:colorAccent">#00d4aa</item>
+        <item name="android:windowBackground">#FF000000</item>
+        <item name="android:background">#FF000000</item>
+        <item name="android:colorBackground">#FF000000</item>
+        <item name="android:textColorPrimary">#f1f5f9</item>
+        <item name="android:textColorSecondary">#94a3b8</item>
+    </style>
 </resources>

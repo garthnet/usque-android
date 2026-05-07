@@ -260,9 +260,9 @@ func StartTunnel(configPath string, tunFd int, mtu int, packetFlow PacketFlow, c
 		// Use default from config (IPv4)
 		endpoint = &net.UDPAddr{
 			IP:   net.ParseIP(config.AppConfig.EndpointV4),
-			Port: 443,
+			Port: 500,
 		}
-		log.Printf("Using default endpoint: %s:443", config.AppConfig.EndpointV4)
+		log.Printf("Using default endpoint: %s:500", config.AppConfig.EndpointV4)
 	}
 
 	// Create context for cancellation
@@ -449,10 +449,10 @@ func GetEndpoint() string {
 	return customEndpoint
 }
 
-// GetDefaultEndpoint returns the default endpoint from config (IPv4:443)
+// GetDefaultEndpoint returns the default endpoint (IPv4:port)
 func GetDefaultEndpoint(configPath string) string {
 	if err := config.LoadConfig(configPath); err == nil {
-		return config.AppConfig.EndpointV4 + ":443"
+		return "162.159.198.2:500"
 	}
 	return ""
 }
