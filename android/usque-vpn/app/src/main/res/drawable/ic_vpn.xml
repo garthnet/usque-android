@@ -1,47 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
+    android:width="216dp"
+    android:height="216dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Rocket body -->
-    <path
-        android:fillColor="#a29bfe"
-        android:pathData="M54,12 C54,12 42,28 42,52 C42,60 46,68 54,72 C62,68 66,60 66,52 C66,28 54,12 54,12 Z" />
-
-    <!-- Rocket nose -->
-    <path
-        android:fillColor="#6c5ce7"
-        android:pathData="M54,12 C50,20 46,30 44,40 L64,40 C62,30 58,20 54,12 Z" />
-
-    <!-- Rocket window -->
-    <path
-        android:fillColor="#1a1a2e"
-        android:pathData="M54,36 m-6,0 a6,6 0,1 1,12 0 a6,6 0,1 1,-12 0" />
-
-    <!-- Window highlight -->
-    <path
-        android:fillColor="#00cec9"
-        android:pathData="M54,36 m-4,0 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0" />
-
-    <!-- Left fin -->
-    <path
-        android:fillColor="#6c5ce7"
-        android:pathData="M42,52 L30,68 L38,64 L42,60 Z" />
-
-    <!-- Right fin -->
-    <path
-        android:fillColor="#6c5ce7"
-        android:pathData="M66,52 L78,68 L70,64 L66,60 Z" />
-
-    <!-- Flame outer -->
+    <!-- Flame outer - big -->
     <path
         android:fillColor="#e17055"
-        android:pathData="M48,72 C48,72 50,88 54,96 C58,88 60,72 60,72 C58,76 50,76 48,72 Z" />
+        android:pathData="M43,74 L54,102 L65,74 C62,80 46,80 43,74z" />
 
-    <!-- Flame inner -->
+    <!-- Flame inner - golden -->
     <path
         android:fillColor="#fdcb6e"
-        android:pathData="M50,72 C50,72 52,84 54,90 C56,84 58,72 58,72 C56,75 52,75 50,72 Z" />
+        android:pathData="M47,74 L54,94 L61,74 C59,78 49,78 47,74z" />
+
+    <!-- Rocket body - main (fills most of viewport) -->
+    <path
+        android:fillColor="#a29bfe"
+        android:pathData="M54,8 C54,8 36,30 36,60 C36,70 44,76 54,76 C64,76 72,70 72,60 C72,30 54,8 54,8z" />
+
+    <!-- Nose cone - deep purple highlight -->
+    <path
+        android:fillColor="#6c5ce7"
+        android:pathData="M54,8 C54,8 42,28 42,42 L66,42 C66,28 54,8 54,8z" />
+
+    <!-- Window - dark with teal ring -->
+    <path
+        android:fillColor="#1a1a2e"
+        android:pathData="M54,34 m-10,0 a10,10 0,1 1,20 0 a10,10 0,1 1,-20 0" />
+    <path
+        android:fillColor="#00cec9"
+        android:pathData="M54,34 m-8,0 a8,8 0,1 1,16 0 a8,8 0,1 1,-16 0" />
+    <path
+        android:fillColor="#1a1a2e"
+        android:pathData="M54,34 m-6,0 a6,6 0,1 1,12 0 a6,6 0,1 1,-12 0" />
+
+    <!-- Left fin - deep purple -->
+    <path
+        android:fillColor="#6c5ce7"
+        android:pathData="M36,58 L20,78 L36,72z" />
+
+    <!-- Right fin - deep purple -->
+    <path
+        android:fillColor="#6c5ce7"
+        android:pathData="M72,58 L88,78 L72,72z" />
+
+    <!-- Body stripes for detail -->
+    <path
+        android:fillColor="#6c5ce7"
+        android:pathData="M44,52 L64,52 L62,56 L46,56z" />
+    <path
+        android:fillColor="#6c5ce7"
+        android:pathData="M46,62 L62,62 L60,66 L48,66z" />
 </vector>
