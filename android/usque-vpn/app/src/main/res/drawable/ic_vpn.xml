@@ -5,23 +5,18 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Background circle -->
-    <path
-        android:fillColor="#0f1923"
-        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
-
-    <!-- Shield -->
+    <!-- Shield shape -->
     <path
         android:fillColor="#00d4aa"
-        android:pathData="M54,18L26,30v14c0,16.6 11.5,32.2 28,36 16.5,-3.8 28,-19.4 28,-36V30L54,18z" />
+        android:pathData="M54,14L22,28v18c0,20 13.5,38.5 32,42 18.5,-3.5 32,-22 32,-42V28L54,14z" />
 
-    <!-- Shield inner shadow -->
+    <!-- Shield inner -->
     <path
         android:fillColor="#00b894"
-        android:pathData="M54,24L32,34v10c0,13.8 9.6,26.8 22,30 12.4,-3.2 22,-16.2 22,-30V34L54,24z" />
+        android:pathData="M54,22L30,33v13c0,16 10.5,30.5 24,34 13.5,-3.5 24,-18 24,-34V33L54,22z" />
 
-    <!-- Lightning bolt -->
+    <!-- Letter U -->
     <path
         android:fillColor="#ffffff"
-        android:pathData="M58,36L42,56h10l-4,16l20,-24h-12l6,-12z" />
+        android:pathData="M42,40v16c0,6.6 5.4,12 12,12s12,-5.4 12,-12V40h-8v16c0,2.2-1.8,4-4,4s-4,-1.8-4,-4V40z" />
 </vector>

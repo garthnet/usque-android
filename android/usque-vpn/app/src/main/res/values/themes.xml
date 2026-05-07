@@ -3,8 +3,8 @@
     <style name="Theme.UsqueVpn" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorPrimary">#00d4aa</item>
         <item name="android:colorAccent">#00d4aa</item>
-        <item name="android:statusBarColor">#0a1018</item>
-        <item name="android:navigationBarColor">#0a1018</item>
-        <item name="android:windowBackground">#0f1923</item>
+        <item name="android:statusBarColor">#FF000000</item>
+        <item name="android:navigationBarColor">#FF000000</item>
+        <item name="android:windowBackground">#FF000000</item>
     </style>
 </resources>
