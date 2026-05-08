@@ -1,8 +1,6 @@
-# Usque VPN Android
+# Usque Android
 
-<p align="center">
-  <img src="icon.png" width="100" alt="Usque VPN Icon">
-</p>
+
 
 <p align="center">
   <strong>Cloudflare WARP / MASQUE VPN Client for Android</strong>
