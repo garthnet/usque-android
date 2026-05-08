@@ -1,4 +1,4 @@
-# Usque Android
+<h1 align="center">Usque Android</h1>
 
 
 
