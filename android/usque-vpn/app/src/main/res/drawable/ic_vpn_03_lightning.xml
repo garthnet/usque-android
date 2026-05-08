@@ -8,14 +8,14 @@
 
     <!-- Outer ring -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#a29bfe"
         android:strokeWidth="5"
         android:pathData="M54,16 m-26,0 a26,26 0,1 1,52 0 a26,26 0,1 1,-52 0" />
 
     <!-- Inner ring -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#a29bfe"
         android:strokeWidth="3"
         android:pathData="M54,16 m-18,0 a18,18 0,1 1,36 0 a18,18 0,1 1,-36 0" />

@@ -18,7 +18,7 @@
 
     <!-- WiFi arc 1 (outer) -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#1a1a2e"
         android:strokeWidth="4"
         android:strokeLineCap="round"
@@ -26,7 +26,7 @@
 
     <!-- WiFi arc 2 (middle) -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#1a1a2e"
         android:strokeWidth="4"
         android:strokeLineCap="round"
@@ -34,7 +34,7 @@
 
     <!-- WiFi arc 3 (inner) -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#1a1a2e"
         android:strokeWidth="4"
         android:strokeLineCap="round"
@@ -50,7 +50,7 @@
         android:fillColor="#00cec9"
         android:pathData="M50,72 L58,72 L58,82 L50,82 Z" />
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#00cec9"
         android:strokeWidth="2.5"
         android:pathData="M52,72 L52,68 C52,65 53,63 54,63 C55,63 56,65 56,68 L56,72" />
