@@ -1,4 +1,4 @@
-#   Usque Android
+# Usque Android
 
 
 
@@ -134,12 +134,5 @@ This project is based on [usque](https://github.com/Diniboy1123/usque) by Dinibo
 - [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) - WARP protocol
 - [MASQUE](https://datatracker.ietf.org/doc/rfc9484/) - RFC 9484
 
-## 📮 Contact
-
-- GitHub: [@garthnet](https://github.com/garthnet)
 
 ---
-
-<p align="center">
-  <sub>Made with ❤️ for a faster, more private internet</sub>
-</p>
