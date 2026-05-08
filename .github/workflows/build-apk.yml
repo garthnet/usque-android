@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build Debug APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,46 +40,95 @@ jobs:
           mkdir -p usque-vpn/app/libs
           cp usque.aar usque-vpn/app/libs/
 
-      - name: Generate debug keystore
+      - name: Generate release keystore (first run only)
+        run: |
+          KEYSTORE="android/usque-vpn/app/keystore/usque-release.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            echo "Generating release keystore..."
+            mkdir -p "$(dirname "$KEYSTORE")"
+            keytool -genkey -v \
+              -keystore "$KEYSTORE" \
+              -storepass usque2024 \
+              -alias usque \
+              -keypass usque2024 \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 36500 \
+              -dname "CN=Usque VPN, OU=Dev, O=GarthNet, L=Unknown, ST=Unknown, C=US"
+            echo "keystore_generated=true" >> $GITHUB_OUTPUT
+          else
+            echo "Keystore already exists, using it."
+            echo "keystore_generated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit keystore (first run only)
+        if: steps.version.outputs.keystore_generated == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add android/usque-vpn/app/keystore/usque-release.keystore
+          git commit -m "chore: add release keystore"
+          git push
+
+      - name: Calculate version
+        id: version
+        run: |
+          # Auto-increment from latest release tag
+          LATEST_TAG=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+          
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_VERSION="1.0.0"
+          else
+            MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+            MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+            PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          fi
+          
+          # Convert version to versionCode (major*10000 + minor*100 + patch)
+          MAJOR=$(echo "$NEW_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$NEW_VERSION" | cut -d. -f2)
+          PATCH=$(echo "$NEW_VERSION" | cut -d. -f3)
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $NEW_VERSION (code: $VERSION_CODE)"
+
+      - name: Update version in build.gradle.kts
         run: |
           cd android/usque-vpn/app
-          mkdir -p keystore
-          keytool -genkey -v \
-            -keystore keystore/debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Usque Debug, OU=Dev, O=Usque, L=Unknown, ST=Unknown, C=US"
+          sed -i "s/versionCode = .*/versionCode = ${{ steps.version.outputs.version_code }}/" build.gradle.kts
+          sed -i "s/versionName = .*/versionName = \"${{ steps.version.outputs.version }}\"/" build.gradle.kts
+          echo "Updated build.gradle.kts:"
+          grep -E "versionCode|versionName" build.gradle.kts
 
       - name: Generate Gradle Wrapper
         run: |
           cd android/usque-vpn
           gradle wrapper --gradle-version 8.5
 
-      - name: Build Debug APK
+      - name: Build Release APK
         run: |
           cd android/usque-vpn
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
-      - name: Get version and rename APK
-        id: version
+      - name: Rename APK
         run: |
-          TAG="v$(date +%Y%m%d-%H%M)"
-          VERSION=$(grep 'versionName' android/usque-vpn/app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
-          APK_SRC="android/usque-vpn/app/build/outputs/apk/debug/app-debug.apk"
-          APK_DST="android/usque-vpn/app/build/outputs/apk/debug/Usque-${VERSION}-${TAG}.apk"
+          APK_SRC="android/usque-vpn/app/build/outputs/apk/release/app-release.apk"
+          APK_DST="android/usque-vpn/app/build/outputs/apk/release/Usque-v${{ steps.version.outputs.version }}.apk"
           mv "$APK_SRC" "$APK_DST"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "apk_name=Usque-${VERSION}-${TAG}.apk" >> $GITHUB_OUTPUT
+          echo "APK: $APK_DST"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: "Usque VPN ${{ steps.version.outputs.tag }}"
-          files: android/usque-vpn/app/build/outputs/apk/debug/*.apk
+          name: "Usque VPN v${{ steps.version.outputs.version }}"
+          files: android/usque-vpn/app/build/outputs/apk/release/*.apk
           generate_release_notes: true
